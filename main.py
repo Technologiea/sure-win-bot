@@ -1,11 +1,10 @@
-# main.py
 import logging
+import os
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import (
     ApplicationBuilder, CommandHandler, CallbackQueryHandler,
     MessageHandler, ContextTypes, filters
 )
-import os
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 REG_LINK = "https://1wprde.com/?open=register&p=v91c&sub1=97891"
@@ -13,9 +12,11 @@ PROMO_CODE = "BETWIN190"
 MAIN_MENU, AWAITING_ID = range(2)
 user_states = {}
 
+# Setup logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Handlers
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     user_states[user.id] = MAIN_MENU
@@ -97,16 +98,22 @@ async def start_over(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
     await start(query, context)
 
-def main():
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CallbackQueryHandler(show_instruction, pattern="^instruction$"))
-    app.add_handler(CallbackQueryHandler(register_info, pattern="^register$"))
-    app.add_handler(CallbackQueryHandler(get_signal, pattern="^get_signal$"))
-    app.add_handler(CallbackQueryHandler(check_id, pattern="^check_id$"))
-    app.add_handler(CallbackQueryHandler(start_over, pattern="^start_over$"))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_id_input))
-    app.run_polling()
+# ✅ Entry Point
+async def main():
+    application = ApplicationBuilder().token(BOT_TOKEN).build()
 
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CallbackQueryHandler(show_instruction, pattern="^instruction$"))
+    application.add_handler(CallbackQueryHandler(register_info, pattern="^register$"))
+    application.add_handler(CallbackQueryHandler(get_signal, pattern="^get_signal$"))
+    application.add_handler(CallbackQueryHandler(check_id, pattern="^check_id$"))
+    application.add_handler(CallbackQueryHandler(start_over, pattern="^start_over$"))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_id_input))
+
+    print("✅ SURE WIN BOT is now live!")
+    await application.run_polling()
+
+# 🔁 Run the async main
 if __name__ == "__main__":
-    main()
+    import asyncio
+    asyncio.run(main())
