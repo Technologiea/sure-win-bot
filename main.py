@@ -51,7 +51,9 @@ TRANSLATIONS = {
         'check_id': "🔍 Check My ID",
         'enter_id': "🔎 Please type your *1WIN User ID* (9 digits):",
         'invalid_id': "❌ You've entered an *invalid ID*. Please try again.",
-        'invalid_format': "❌ Invalid format. Please enter a *9-digit* User ID.",
+        'invalid_format': "❌ Invalid format. Please enter a *9-digit User ID*.\n\n"
+                          "🔹 Example: `123456789`\n"
+                          "🔹 Or click /start to return to main menu",
         'error': "⚠️ An error occurred. Please try again or use /start",
         'language_prompt': "🌐 Please choose your language:",
         'language_set': "✅ Language set to {language}",
@@ -90,7 +92,9 @@ TRANSLATIONS = {
         'check_id': "🔍 Verificar mi ID",
         'enter_id': "🔎 Por favor, escribe tu *ID de usuario de 1WIN* (9 dígitos):",
         'invalid_id': "❌ Has ingresado un *ID inválido*. Por favor, inténtalo de nuevo.",
-        'invalid_format': "❌ Formato inválido. Por favor, ingresa un *ID de usuario de 9 dígitos*.",
+        'invalid_format': "❌ Formato inválido. Por favor, ingresa un *ID de usuario de 9 dígitos*.\n\n"
+                          "🔹 Ejemplo: `123456789`\n"
+                          "🔹 O haz clic en /start para volver al menú principal",
         'error': "⚠️ Ocurrió un error. Por favor, intenta de nuevo o usa /start",
         'language_prompt': "🌐 Por favor, elige tu idioma:",
         'language_set': "✅ Idioma establecido en {language}",
@@ -129,7 +133,9 @@ TRANSLATIONS = {
         'check_id': "🔍 Проверить мой ID",
         'enter_id': "🔎 Пожалуйста, введите ваш *ID пользователя 1WIN* (9 цифр):",
         'invalid_id': "❌ Вы ввели *неверный ID*. Пожалуйста, попробуйте еще раз.",
-        'invalid_format': "❌ Неверный формат. Пожалуйста, введите *9-значный ID пользователя*.",
+        'invalid_format': "❌ Неверный формат. Пожалуйста, введите *9-значный ID пользователя*.\n\n"
+                          "🔹 Пример: `123456789`\n"
+                          "🔹 Или нажмите /start, чтобы вернуться в главное меню",
         'error': "⚠️ Произошла ошибка. Пожалуйста, попробуйте снова или используйте /start",
         'language_prompt': "🌐 Пожалуйста, выберите язык:",
         'language_set': "✅ Язык изменен на {language}",
@@ -269,12 +275,19 @@ async def handle_id_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
             response = _('invalid_format', user_id)
         await update.message.reply_text(response, parse_mode="Markdown")
     else:
+        # If not in AWAITING_ID state, send them to start
         await start(update, context)
 
 # --- Start Over Handler ---
 async def start_over(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
+    
+    # Clear any state and return to main menu
+    user_id = query.from_user.id
+    if user_id in user_states:
+        del user_states[user_id]
+    
     await start(query, context)
 
 # --- Error Handler ---
