@@ -1,5 +1,6 @@
 import logging
 import os
+import asyncio
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import (
     ApplicationBuilder, CommandHandler, CallbackQueryHandler,
@@ -12,11 +13,9 @@ PROMO_CODE = "BETWIN190"
 MAIN_MENU, AWAITING_ID = range(2)
 user_states = {}
 
-# Setup logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Handlers
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     user_states[user.id] = MAIN_MENU
@@ -72,8 +71,6 @@ async def register_info(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.edit_message_text(register_text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
 
 async def get_signal(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
     await register_info(update, context)
 
 async def check_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -87,7 +84,7 @@ async def handle_id_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text.strip()
     if user_states.get(user_id) == AWAITING_ID:
         if text.isdigit() and len(text) == 9:
-            await update.message.reply_text("❌ You've entered an invalid ID. Please try again.", parse_mode="Markdown")
+            await update.message.reply_text("✅ ID received. We will verify it shortly!")
         else:
             await update.message.reply_text("❌ Invalid format. Enter a *9-digit* ID.", parse_mode="Markdown")
     else:
@@ -98,10 +95,8 @@ async def start_over(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
     await start(query, context)
 
-# ✅ Entry Point
 async def main():
     application = ApplicationBuilder().token(BOT_TOKEN).build()
-
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CallbackQueryHandler(show_instruction, pattern="^instruction$"))
     application.add_handler(CallbackQueryHandler(register_info, pattern="^register$"))
@@ -113,7 +108,5 @@ async def main():
     print("✅ SURE WIN BOT is now live!")
     await application.run_polling()
 
-# 🔁 Run the async main
 if __name__ == "__main__":
-    import asyncio
     asyncio.run(main())
