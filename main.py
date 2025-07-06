@@ -2,7 +2,7 @@ import os
 import logging
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import (
-    ApplicationBuilder,
+    Application,
     ContextTypes,
     CommandHandler,
     CallbackQueryHandler,
@@ -119,17 +119,17 @@ async def start_over(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await start(query, context)
 
 # --- Error Handler ---
-async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
     logger.error(f"Update {update} caused error: {context.error}")
-    if update.message:
+    if isinstance(update, Update) and update.message:
         await update.message.reply_text("⚠️ An error occurred. Please try again or use /start")
-    elif update.callback_query:
+    elif isinstance(update, Update) and update.callback_query:
         await update.callback_query.message.reply_text("⚠️ An error occurred. Please try again or use /start")
 
 # --- Main Application ---
 def main():
     # Create application
-    application = ApplicationBuilder().token(BOT_TOKEN).build()
+    application = Application.builder().token(BOT_TOKEN).build()
     
     # Add handlers
     application.add_handler(CommandHandler("start", start))
