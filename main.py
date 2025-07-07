@@ -1,7 +1,8 @@
 import os
 import logging
-from http.server import BaseHTTPRequestHandler, HTTPServer
 import threading
+import time
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import (
     Application,
@@ -13,7 +14,7 @@ from telegram.ext import (
 )
 
 # --- Configuration ---
-PORT = int(os.environ.get('PORT', 8080))  # Render requires this
+PORT = int(os.environ.get('PORT', 8080))
 BOT_TOKEN = os.getenv('BOT_TOKEN')
 REG_LINK = "https://1wprde.com/?open=register&p=v91c&sub1=97891"
 PROMO_CODE = "BETWIN190"
@@ -21,7 +22,7 @@ MAIN_MENU, AWAITING_ID, LANGUAGE_SELECTION = range(3)
 user_states = {}
 user_languages = {}
 
-# --- Simple HTTP Server for Render Health Checks ---
+# --- Enhanced HTTP Server for Render Health Checks ---
 class HealthCheckHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
@@ -29,10 +30,40 @@ class HealthCheckHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(b'Bot is running!')
         
+    def log_message(self, format, *args):
+        return  # Disable access logs to reduce noise
+
 def run_http_server():
-    server = HTTPServer(('', PORT), HealthCheckHandler)
+    server_address = ('', PORT)
+    httpd = HTTPServer(server_address, HealthCheckHandler)
     logging.info(f"🌐 HTTP server running on port {PORT}")
-    server.serve_forever()
+    httpd.serve_forever()
+
+# --- Robust Application Runner ---
+def run_bot_forever():
+    while True:
+        try:
+            logging.info("🤖 Starting SURE WIN BOT...")
+            application = Application.builder().token(BOT_TOKEN).build()
+            
+            # Add handlers
+            application.add_handler(CommandHandler("start", start))
+            application.add_handler(CallbackQueryHandler(show_instruction, pattern="^instruction$"))
+            application.add_handler(CallbackQueryHandler(register_info, pattern="^register$"))
+            application.add_handler(CallbackQueryHandler(get_signal, pattern="^get_signal$"))
+            application.add_handler(CallbackQueryHandler(check_id, pattern="^check_id$"))
+            application.add_handler(CallbackQueryHandler(start_over, pattern="^start_over$"))
+            application.add_handler(CallbackQueryHandler(choose_language, pattern="^choose_language$"))
+            application.add_handler(CallbackQueryHandler(set_language, pattern="^set_lang_"))
+            application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_id_input))
+            application.add_error_handler(error_handler)
+            
+            application.run_polling()
+        except Exception as e:
+            logging.error(f"🚨 Bot crashed: {e}")
+            logging.info("🔄 Restarting bot in 10 seconds...")
+            time.sleep(10)
+            
 # Translation dictionary
 TRANSLATIONS = {
     'en': {
@@ -325,32 +356,20 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
             await update.callback_query.message.reply_text(error_text)
 
 # --- Main Application ---
-def main():
+if __name__ == '__main__':
+    # Configure logging
+    logging.basicConfig(
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        level=logging.INFO
+    )
+    logger = logging.getLogger(__name__)
+    
     # Start HTTP server in a separate thread
     http_thread = threading.Thread(target=run_http_server, daemon=True)
     http_thread.start()
     
-    # Create Telegram bot application
-    application = Application.builder().token(BOT_TOKEN).build()
+    # Give HTTP server time to start
+    time.sleep(2)
     
-    # Add handlers
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(CallbackQueryHandler(show_instruction, pattern="^instruction$"))
-    application.add_handler(CallbackQueryHandler(register_info, pattern="^register$"))
-    application.add_handler(CallbackQueryHandler(get_signal, pattern="^get_signal$"))
-    application.add_handler(CallbackQueryHandler(check_id, pattern="^check_id$"))
-    application.add_handler(CallbackQueryHandler(start_over, pattern="^start_over$"))
-    application.add_handler(CallbackQueryHandler(choose_language, pattern="^choose_language$"))
-    application.add_handler(CallbackQueryHandler(set_language, pattern="^set_lang_"))
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_id_input))
-    
-    # Add error handler
-    application.add_error_handler(error_handler)
-    
-    # Start bot
-    logger.info("🤖 Starting SURE WIN BOT with 24/7 support...")
-    logger.info(f"🚀 Bot will now run continuously with HTTP health checks on port {PORT}")
-    application.run_polling()
-
-if __name__ == '__main__':
-    main()
+    # Start bot with restart protection
+    run_bot_forever()
