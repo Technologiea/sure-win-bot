@@ -1,5 +1,7 @@
 import os
 import logging
+from http.server import BaseHTTPRequestHandler, HTTPServer
+import threading
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import (
     Application,
@@ -11,13 +13,26 @@ from telegram.ext import (
 )
 
 # --- Configuration ---
+PORT = int(os.environ.get('PORT', 8080))  # Render requires this
 BOT_TOKEN = os.getenv('BOT_TOKEN')
 REG_LINK = "https://1wprde.com/?open=register&p=v91c&sub1=97891"
 PROMO_CODE = "BETWIN190"
 MAIN_MENU, AWAITING_ID, LANGUAGE_SELECTION = range(3)
 user_states = {}
-user_languages = {}  # Store user's language preference
+user_languages = {}
 
+# --- Simple HTTP Server for Render Health Checks ---
+class HealthCheckHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header('Content-type', 'text/plain')
+        self.end_headers()
+        self.wfile.write(b'Bot is running!')
+        
+def run_http_server():
+    server = HTTPServer(('', PORT), HealthCheckHandler)
+    logging.info(f"🌐 HTTP server running on port {PORT}")
+    server.serve_forever()
 # Translation dictionary
 TRANSLATIONS = {
     'en': {
@@ -311,7 +326,11 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
 
 # --- Main Application ---
 def main():
-    # Create application
+    # Start HTTP server in a separate thread
+    http_thread = threading.Thread(target=run_http_server, daemon=True)
+    http_thread.start()
+    
+    # Create Telegram bot application
     application = Application.builder().token(BOT_TOKEN).build()
     
     # Add handlers
@@ -329,7 +348,8 @@ def main():
     application.add_error_handler(error_handler)
     
     # Start bot
-    logger.info("🤖 Starting SURE WIN BOT with multilingual support...")
+    logger.info("🤖 Starting SURE WIN BOT with 24/7 support...")
+    logger.info(f"🚀 Bot will now run continuously with HTTP health checks on port {PORT}")
     application.run_polling()
 
 if __name__ == '__main__':
