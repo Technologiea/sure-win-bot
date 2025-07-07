@@ -58,11 +58,27 @@ def run_bot_forever():
             application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_id_input))
             application.add_error_handler(error_handler)
             
-            application.run_polling()
+           # Add critical exception handler
+            application.post_init = post_init
+            application.post_stop = post_stop
+            
+            application.run_polling(
+                close_loop=False,  # Prevent automatic loop closure
+                stop_signals=None  # Disable signal handling
+            )
         except Exception as e:
             logging.error(f"🚨 Bot crashed: {e}")
-            logging.info("🔄 Restarting bot in 10 seconds...")
-            time.sleep(10)
+            logging.info("🔄 Restarting bot in 30 seconds...")
+            time.sleep(30)  # Increased delay to resolve conflicts
+
+# --- Add these new functions ---
+async def post_init(app: Application):
+    logging.info("🚀 Bot initialization complete")
+
+async def post_stop(app: Application):
+    logging.info("🛑 Bot shutdown complete")
+    await app.updater.stop()  # Properly stop updater
+    await app.shutdown()      # Cleanup resources
             
 # Translation dictionary
 TRANSLATIONS = {
